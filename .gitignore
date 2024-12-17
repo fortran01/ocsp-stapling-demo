@@ -1,0 +1,73 @@
+# SSL/TLS related
+*.pem
+*.key
+*.crt
+*.csr
+*.srl
+*.der
+*.p12
+*.pfx
+nginx/ssl/*
+!nginx/ssl/.gitkeep
+
+# Certbot related
+.well-known/
+certbot-work/
+nginx/certbot-work/
+/etc/letsencrypt/
+.certbot/
+
+# Python related
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+.env
+venv/
+ENV/
+
+# Docker related
+.docker/
+docker-compose.override.yml
+
+# IDE related
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS related
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# AWS credentials
+.aws/
+aws.credentials
+credentials
+config
+
+# Logs
+*.log
+logs/

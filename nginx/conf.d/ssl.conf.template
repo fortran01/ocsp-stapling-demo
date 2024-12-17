@@ -1,0 +1,60 @@
+# HTTPS server configuration
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ocsp-demo.rara.dev;
+
+    location / {
+        add_header Content-Type text/plain;
+        return 200 'Hello from HTTPS!\n';
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ocsp-demo.rara.dev;
+
+    # SSL configuration
+    ssl_certificate /etc/nginx/ssl/ocsp-demo.rara.dev/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/ocsp-demo.rara.dev/privkey.pem;
+    ssl_trusted_certificate /etc/nginx/ssl/ocsp-demo.rara.dev/chain.pem;
+
+    # OCSP Stapling
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    ssl_verify_depth 3;
+    ssl_verify_client off;
+    ssl_stapling_file /tmp/ocsp-cache.der;  # Add cache file
+    
+    # Use multiple DNS resolvers for redundancy
+    resolver 1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4 valid=60s;
+    resolver_timeout 2s;
+
+    # Explicitly set OCSP responder
+    ssl_stapling_responder http://e5.o.lencr.org;
+
+    # SSL protocols and ciphers
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+
+    # SSL session settings
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+
+    # Debug logging - increase verbosity for OCSP debugging
+    error_log /var/log/nginx/error.log debug;
+
+    # Add SSL information to response headers for debugging
+    add_header X-SSL-Protocol $ssl_protocol;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-SSL-Verify $ssl_client_verify;
+
+    location / {
+        add_header Content-Type text/plain;
+        return 200 'Hello from HTTPS!\n';
+    }
+}
