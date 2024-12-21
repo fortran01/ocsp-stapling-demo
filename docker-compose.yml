@@ -38,6 +38,25 @@ services:
       - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
     restart: unless-stopped
 
+  haproxy:
+    build:
+      context: ./haproxy
+      dockerfile: Dockerfile
+    ports:
+      - "7080:80"
+      - "7443:443"
+      - "8404:8404"  # Stats page
+    volumes:
+      - ./haproxy/ssl:/etc/haproxy/ssl
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+    environment:
+      - DOMAIN=haproxy-ocsp.rara.dev
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+    restart: unless-stopped
+
 volumes:
   certbot-etc:
   certbot-var:

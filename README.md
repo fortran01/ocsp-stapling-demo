@@ -1,6 +1,6 @@
 # OCSP Stapling Demo
 
-This project demonstrates OCSP stapling configuration using both Nginx and Apache with automated Let's Encrypt certificates and AWS Route53.
+This project demonstrates OCSP stapling configuration using Nginx, Apache, and HAProxy with automated Let's Encrypt certificates and AWS Route53.
 
 ## Prerequisites
 
@@ -22,12 +22,16 @@ This project demonstrates OCSP stapling configuration using both Nginx and Apach
 │   ├── nginx.conf     # Main Nginx configuration
 │   ├── ssl/          # SSL certificates directory
 │   └── start.sh      # Certificate and Nginx startup script
-└── apache/            # Apache configuration
-    ├── Dockerfile    # Apache container configuration
-    ├── conf/
-    │   └── ssl.conf  # SSL and OCSP configuration
-    ├── ssl/         # SSL certificates directory
-    └── start.sh     # Certificate and Apache startup script
+├── apache/            # Apache configuration
+│   ├── Dockerfile    # Apache container configuration
+│   ├── conf/
+│   │   └── ssl.conf  # SSL and OCSP configuration
+│   ├── ssl/         # SSL certificates directory
+│   └── start.sh     # Certificate and Apache startup script
+└── haproxy/          # HAProxy configuration
+    ├── Dockerfile    # HAProxy container configuration
+    ├── haproxy.cfg  # HAProxy configuration with SSL and OCSP
+    └── start.sh     # Certificate and HAProxy startup script
 ```
 
 ## Setup Instructions
@@ -37,7 +41,7 @@ This project demonstrates OCSP stapling configuration using both Nginx and Apach
 2. SSL certificates are automatically managed by Let's Encrypt:
    - Certificates are obtained using DNS-01 challenge via Route53
    - Certificate renewal is handled automatically
-   - OCSP stapling is configured out of the box for both servers
+   - OCSP stapling is configured out of the box for all servers
 
 3. Configure AWS credentials:
    - AWS_ACCESS_KEY_ID
@@ -72,9 +76,16 @@ The startup scripts will:
 - HTTP Port: 8080
 - HTTPS Port: 8443
 
+### HAProxy Server
+
+- Domain: haproxy-ocsp.rara.dev
+- HTTP Port: 7080
+- HTTPS Port: 7443
+- Stats Page: 8404
+
 ## Testing OCSP Stapling
 
-You can test OCSP stapling on either server using:
+You can test OCSP stapling on any server using:
 
 ### For Nginx
 
@@ -86,6 +97,12 @@ echo QUIT | openssl s_client -connect ocsp-demo.rara.dev:9443 -status
 
 ```bash
 echo QUIT | openssl s_client -connect apache-ocsp.rara.dev:8443 -status
+```
+
+### For HAProxy
+
+```bash
+echo QUIT | openssl s_client -connect haproxy-ocsp.rara.dev:7443 -status
 ```
 
 The expected successful output should look like this:
@@ -109,3 +126,10 @@ OCSP Response Data:
     Cert Status: good
     This Update: Dec 17 03:23:00 2024 GMT
     Next Update: Dec 24 03:22:58 2024 GMT
+```
+
+## HAProxy Stats Page
+
+HAProxy provides a statistics page for monitoring:
+- URL: http://localhost:8404/stats
+- Shows server status, connection stats, and SSL certificate information
