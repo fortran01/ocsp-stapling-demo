@@ -19,6 +19,25 @@ services:
       - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
     restart: unless-stopped
 
+  apache:
+    build:
+      context: ./apache
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./apache/ssl:/etc/apache2/ssl
+      - ./apache/conf:/usr/local/apache2/conf/extra
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+    environment:
+      - DOMAIN=apache-ocsp.rara.dev
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+    restart: unless-stopped
+
 volumes:
   certbot-etc:
   certbot-var:
