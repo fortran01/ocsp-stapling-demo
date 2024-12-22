@@ -1,0 +1,1 @@
+/etc/haproxy/ssl/haproxy-ocsp.rara.dev/combined.pem [ocsp-update on] /etc/haproxy/ssl/haproxy-ocsp.rara.dev/chain.pem

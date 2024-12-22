@@ -39,46 +39,43 @@ cat /etc/haproxy/ssl/${DOMAIN}/fullchain.pem \
     /etc/haproxy/ssl/${DOMAIN}/privkey.pem \
     > /etc/haproxy/ssl/${DOMAIN}/combined.pem
 
-# Function to update OCSP response
-update_ocsp_response() {
-    local domain=$1
-    local cert_path="/etc/haproxy/ssl/${domain}"
-    
-    # Get OCSP responder URL
-    OCSP_URL=$(openssl x509 -in "${cert_path}/fullchain.pem" -text -noout | grep "OCSP - URI:" | cut -d: -f2- | tr -d ' ')
-    OCSP_HOST=$(echo "${OCSP_URL}" | sed 's|http://||')
-    
-    echo "Updating OCSP response for ${domain}"
-    
-    # Generate and verify OCSP response
-    openssl ocsp -issuer "${cert_path}/chain.pem" \
-                 -cert "${cert_path}/fullchain.pem" \
-                 -url "${OCSP_URL}" \
-                 -header "Host=${OCSP_HOST}" \
-                 -respout "${cert_path}/ocsp.resp" \
-                 -verify_other "${cert_path}/chain.pem" \
-                 -no_nonce \
-                 -timeout 10
-    
-    if [ -f "${cert_path}/ocsp.resp" ]; then
-        echo "OCSP response updated successfully"
-    else
-        echo "Failed to update OCSP response"
-    fi
-}
+# Copy certificate list file to HAProxy config directory
+cp /usr/local/etc/haproxy/crt-list.txt /etc/haproxy/crt-list.txt
 
-# Initial OCSP response update
-update_ocsp_response "${DOMAIN}"
+# Create .ocsp directory for HAProxy
+mkdir -p /etc/haproxy/ssl/${DOMAIN}/.ocsp
+OCSP_FILE="/etc/haproxy/ssl/${DOMAIN}/.ocsp/combined.pem.ocsp"
 
-# Start HAProxy in background
-haproxy -f /usr/local/etc/haproxy/haproxy.cfg &
-HAPROXY_PID=$!
+# Get OCSP response
+echo "Getting initial OCSP response..."
 
-# Set up periodic OCSP update (every 1 hour)
-while true; do
-    sleep 3600
-    update_ocsp_response "${DOMAIN}"
-done &
+# Get OCSP responder URL
+OCSP_URL=$(openssl x509 -in /etc/haproxy/ssl/${DOMAIN}/fullchain.pem -noout -ocsp_uri)
+echo "OCSP URL: ${OCSP_URL}"
 
-# Wait for HAProxy process
-wait ${HAPROXY_PID}
+# Get OCSP response
+openssl ocsp -no_nonce \
+    -issuer /etc/haproxy/ssl/${DOMAIN}/chain.pem \
+    -cert /etc/haproxy/ssl/${DOMAIN}/fullchain.pem \
+    -url "${OCSP_URL}" \
+    -header "Host=e6.o.lencr.org" \
+    -respout "${OCSP_FILE}" \
+    -verify_other /etc/haproxy/ssl/${DOMAIN}/chain.pem \
+    -CAfile /etc/haproxy/ssl/${DOMAIN}/chain.pem \
+    -text
+
+if [ $? -eq 0 ]; then
+    echo "OCSP response obtained successfully"
+    ls -l "${OCSP_FILE}"
+    echo "OCSP response contents:"
+    openssl ocsp -respin "${OCSP_FILE}" -text -noverify
+    chmod 644 "${OCSP_FILE}"
+    # Create a symlink in the same directory as the certificate
+    ln -sf "${OCSP_FILE}" "/etc/haproxy/ssl/${DOMAIN}/combined.pem.ocsp"
+else
+    echo "Failed to get OCSP response"
+    exit 1
+fi
+
+# Start HAProxy in master-worker mode with debug output
+exec haproxy -f /usr/local/etc/haproxy/haproxy.cfg -W -d
